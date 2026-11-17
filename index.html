@@ -6,199 +6,839 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Chingame AI</title>
 <style>
-* { box-sizing: border-box; }
+:root {
+  --bg:#212121; --side:#171717; --panel:#2b2b2b;
+  --panel2:#303030; --border:#414141; --text:#f3f3f3;
+  --muted:#999; --accent:#d9d9d9; --danger:#e47777;
+}
+* { box-sizing:border-box; }
 body {
-  margin: 0;
-  font-family: Arial, sans-serif;
-  background: #212121;
-  color: #eee;
-  display: flex;
-  height: 100vh;
+  margin:0; height:100vh; overflow:hidden;
+  display:flex; background:var(--bg); color:var(--text);
+  font-family:Inter,Arial,sans-serif;
 }
+button,input,textarea,select { font:inherit; }
+button { cursor:pointer; }
+button:disabled { opacity:.5; cursor:not-allowed; }
 .sidebar {
-  width: 255px;
-  background: #171717;
-  padding: 22px;
-  display: flex;
-  flex-direction: column;
+  width:280px; flex-shrink:0; background:var(--side);
+  display:flex; flex-direction:column; padding:17px 13px;
+  border-right:1px solid #292929; transition:width .2s;
 }
-.logo { font-size: 23px; font-weight: bold; margin-bottom: 30px; }
-.new-chat {
-  background: #292929;
-  border: 1px solid #444;
-  color: white;
-  padding: 13px;
-  border-radius: 9px;
-  cursor: pointer;
+.sidebar.collapsed { width:76px; }
+.brand {
+  display:flex; align-items:center; gap:11px;
+  padding:7px 8px 23px; font-size:21px; font-weight:750;
+  white-space:nowrap; overflow:hidden;
 }
-.history { margin-top: 25px; color: #888; font-size: 13px; }
+.brand-mark {
+  width:34px; height:34px; border-radius:11px;
+  display:grid; place-items:center; flex-shrink:0;
+  color:#111; background:#eee; font-weight:900;
+}
+.sidebar-button {
+  width:100%; padding:11px 12px; border:1px solid transparent;
+  border-radius:10px; background:transparent; color:var(--text);
+  text-align:left; display:flex; align-items:center; gap:11px;
+  margin-bottom:6px; white-space:nowrap; overflow:hidden;
+}
+.sidebar-button:hover,.chat-item:hover { background:#292929; }
+.sidebar-button.primary { background:#292929; border-color:#414141; }
+.sidebar-button .symbol { width:20px; text-align:center; flex-shrink:0; }
+.section-label {
+  color:#777; font-size:11px; text-transform:uppercase;
+  letter-spacing:1px; padding:23px 10px 9px;
+}
+.search-box {
+  width:100%; background:#242424; border:1px solid #383838;
+  border-radius:9px; padding:10px; color:white; outline:none;
+  margin:8px 0 4px;
+}
+.chat-list { flex:1; overflow-y:auto; min-height:0; }
+.chat-item {
+  display:flex; align-items:center; gap:4px; border-radius:9px;
+  padding:4px; margin:3px 0;
+}
+.chat-item.active { background:#303030; }
+.chat-open {
+  flex:1; min-width:0; padding:8px 5px; border:0;
+  background:transparent; color:#ddd; text-align:left;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  font-size:13px;
+}
+.chat-action {
+  border:0; background:transparent; color:#999;
+  border-radius:6px; padding:6px; font-size:13px;
+}
+.chat-action:hover { background:#414141; color:white; }
+.sidebar-bottom { border-top:1px solid #303030; padding-top:10px; }
 .main {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 25px;
-  min-width: 0;
+  flex:1; min-width:0; display:flex; flex-direction:column;
+  height:100vh; position:relative;
 }
-.top { width: 100%; color: #aaa; }
-.messages {
-  flex: 1;
-  width: 100%;
-  max-width: 800px;
-  overflow-y: auto;
-  padding: 30px 0;
+.topbar {
+  height:59px; flex-shrink:0; display:flex; align-items:center;
+  justify-content:space-between; padding:0 23px;
+  border-bottom:1px solid #303030;
 }
-.welcome { text-align: center; margin-top: 110px; }
-.welcome h1 { font-size: 35px; }
-.welcome p { color: #aaa; }
-.message {
-  padding: 16px;
-  margin: 12px 0;
-  border-radius: 12px;
-  line-height: 1.6;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
+.top-left { display:flex; align-items:center; gap:12px; }
+.top-title { font-size:15px; font-weight:650; }
+.model-select {
+  background:#303030; border:1px solid #454545; color:#ddd;
+  padding:7px 10px; border-radius:8px; max-width:190px;
 }
-.user { background: #303030; }
-.ai { background: #252525; }
-.input-area {
-  width: 100%;
-  max-width: 800px;
-  padding: 13px;
-  background: #303030;
-  border: 1px solid #555;
-  border-radius: 15px;
-  display: flex;
-  gap: 10px;
+.icon-button {
+  background:transparent; color:#ccc; border:1px solid transparent;
+  border-radius:8px; padding:8px 10px;
 }
-input {
-  flex: 1;
-  background: transparent;
-  color: white;
-  border: none;
-  outline: none;
-  font-size: 16px;
-  min-width: 0;
+.icon-button:hover { background:#303030; border-color:#444; }
+.chat-scroll {
+  flex:1; overflow-y:auto; width:100%; padding:28px 20px 20px;
 }
-.send {
-  background: white;
-  color: black;
-  border: none;
-  border-radius: 9px;
-  padding: 10px 17px;
-  cursor: pointer;
+.chat-content { max-width:850px; margin:0 auto; }
+.welcome {
+  min-height:55vh; display:flex; flex-direction:column;
+  justify-content:center; align-items:center; text-align:center;
 }
-.send:disabled { opacity: 0.5; cursor: wait; }
-@media(max-width:600px) {
-  .sidebar { width: 70px; padding: 12px 6px; }
-  .logo { font-size: 10px; }
-  .new-chat { font-size: 10px; padding: 8px 2px; }
-  .history { display: none; }
+.welcome-mark {
+  width:65px; height:65px; border-radius:22px;
+  background:#eee; color:#111; display:grid; place-items:center;
+  font-size:30px; font-weight:900; margin-bottom:23px;
+}
+.welcome h1 { font-size:32px; margin:0 0 10px; letter-spacing:-1px; }
+.welcome p { color:var(--muted); margin:0; }
+.suggestions {
+  display:flex; gap:9px; flex-wrap:wrap; justify-content:center;
+  margin-top:28px;
+}
+.suggestion {
+  background:#292929; border:1px solid #444; color:#ccc;
+  border-radius:20px; padding:10px 14px; font-size:13px;
+}
+.suggestion:hover { background:#383838; }
+.message-row { display:flex; margin:18px 0 24px; gap:12px; }
+.avatar {
+  width:32px; height:32px; flex-shrink:0; border-radius:50%;
+  display:grid; place-items:center; background:#3b3b3b;
+  font-size:13px; font-weight:700;
+}
+.avatar.ai { background:#eee; color:#111; }
+.message-body { flex:1; min-width:0; }
+.message-name { font-size:13px; color:#aaa; margin:5px 0 8px; }
+.message-text {
+  white-space:pre-wrap; overflow-wrap:anywhere;
+  line-height:1.75; font-size:15px; color:#eee;
+}
+.message-tools { display:flex; gap:6px; margin-top:9px; }
+.message-tools button {
+  background:transparent; border:1px solid transparent;
+  color:#888; border-radius:6px; padding:5px 8px; font-size:12px;
+}
+.message-tools button:hover { background:#303030; color:white; }
+.typing { color:#aaa; font-size:14px; padding:10px 0; }
+.composer-wrap { padding:12px 20px 23px; flex-shrink:0; }
+.composer { max-width:850px; margin:auto; }
+.composer-box {
+  display:flex; align-items:flex-end; gap:10px;
+  background:#303030; border:1px solid #555;
+  border-radius:17px; padding:12px;
+  box-shadow:0 5px 25px #0002;
+}
+.composer-box:focus-within { border-color:#777; }
+#prompt {
+  flex:1; min-width:0; max-height:180px; resize:none;
+  border:0; outline:0; background:transparent;
+  color:white; font-size:15px; line-height:1.5;
+  padding:5px 3px;
+}
+#prompt::placeholder { color:#888; }
+.send-button {
+  border:0; border-radius:10px; background:#eee; color:#111;
+  padding:10px 15px; font-weight:650;
+}
+.send-button:hover { background:white; }
+.send-button:disabled { opacity:.45; }
+.disclaimer {
+  text-align:center; color:#777; font-size:11px; margin-top:10px;
+}
+.overlay {
+  position:fixed; inset:0; background:#0009; z-index:10;
+  display:none; align-items:center; justify-content:center;
+  padding:15px;
+}
+.overlay.open { display:flex; }
+.modal {
+  width:100%; max-width:540px; max-height:85vh; overflow:auto;
+  background:#202020; border:1px solid #444; border-radius:16px;
+  padding:22px; box-shadow:0 20px 70px #0009;
+}
+.modal-header {
+  display:flex; align-items:center; justify-content:space-between;
+  margin-bottom:20px;
+}
+.modal-header h2 { margin:0; font-size:20px; }
+.close-button {
+  background:transparent; color:#aaa; border:0; font-size:22px;
+}
+.field { margin:17px 0; }
+.field label { display:block; color:#ccc; font-size:13px; margin-bottom:8px; }
+.field input,.field textarea,.field select {
+  width:100%; padding:11px; color:white; background:#303030;
+  border:1px solid #494949; border-radius:9px; outline:none;
+}
+.field textarea { min-height:105px; resize:vertical; line-height:1.5; }
+.modal-actions { display:flex; gap:9px; justify-content:flex-end; margin-top:20px; }
+.action-button {
+  background:#eee; color:#111; border:0; border-radius:8px;
+  padding:10px 14px; font-weight:650;
+}
+.action-button.secondary { background:#333; border:1px solid #505050; color:white; }
+.action-button.danger { background:#512c2c; color:#ffdada; }
+.memory-list { display:flex; flex-direction:column; gap:8px; }
+.memory-item {
+  display:flex; align-items:center; gap:8px; background:#303030;
+  border:1px solid #444; border-radius:9px; padding:10px;
+}
+.memory-item span { flex:1; font-size:13px; overflow-wrap:anywhere; }
+.memory-item button { background:transparent; color:#e99; border:0; padding:5px; }
+.empty-note { color:#888; font-size:13px; padding:12px 0; }
+.toast {
+  position:fixed; bottom:95px; left:50%; transform:translateX(-50%);
+  background:#eee; color:#111; padding:10px 16px;
+  border-radius:9px; font-size:13px; display:none; z-index:20;
+}
+.toast.show { display:block; }
+.sidebar.collapsed .brand-name,
+.sidebar.collapsed .button-label,
+.sidebar.collapsed .section-label,
+.sidebar.collapsed .search-box,
+.sidebar.collapsed .chat-list,
+.sidebar.collapsed .sidebar-bottom .button-label { display:none; }
+.sidebar.collapsed .sidebar-button { justify-content:center; padding:12px 5px; }
+@media(max-width:700px) {
+  .sidebar { width:76px; padding:13px 7px; }
+  .sidebar .brand-name,.sidebar .button-label,.sidebar .section-label,
+  .sidebar .search-box,.sidebar .chat-list,.sidebar .sidebar-bottom .button-label { display:none; }
+  .sidebar .sidebar-button { justify-content:center; padding:12px 5px; }
+  .brand { padding:7px 12px 22px; }
+  .topbar { padding:0 12px; }
+  .chat-scroll { padding:18px 13px; }
+  .composer-wrap { padding:8px 12px 15px; }
+  .welcome h1 { font-size:26px; }
+  .model-select { max-width:145px; font-size:12px; }
 }
 </style>
 </head>
 <body>
-<aside class="sidebar">
-  <div class="logo">Chingame AI</div>
-  <button class="new-chat" onclick="newChat()">+ New Chat</button>
-  <div class="history">Your personal AI assistant</div>
+
+<aside class="sidebar" id="sidebar">
+  <div class="brand">
+    <div class="brand-mark">C</div>
+    <span class="brand-name">Chingame AI</span>
+  </div>
+
+  <button class="sidebar-button primary" id="newChat">
+    <span class="symbol">＋</span><span class="button-label">New chat</span>
+  </button>
+  <button class="sidebar-button" id="searchToggle">
+    <span class="symbol">⌕</span><span class="button-label">Search chats</span>
+  </button>
+  <input class="search-box" id="chatSearch" placeholder="Search conversations..." hidden>
+
+  <div class="section-label">Your conversations</div>
+  <div class="chat-list" id="chatList"></div>
+
+  <div class="sidebar-bottom">
+    <button class="sidebar-button" id="memoryButton">
+      <span class="symbol">✧</span><span class="button-label">My memories</span>
+    </button>
+    <button class="sidebar-button" id="settingsButton">
+      <span class="symbol">⚙</span><span class="button-label">Settings</span>
+    </button>
+    <button class="sidebar-button" id="exportButton">
+      <span class="symbol">⇩</span><span class="button-label">Export chats</span>
+    </button>
+    <button class="sidebar-button" id="collapseButton">
+      <span class="symbol">☰</span><span class="button-label">Collapse sidebar</span>
+    </button>
+  </div>
 </aside>
 
 <main class="main">
-  <div class="top">Chingame AI</div>
-  <div class="messages" id="messages">
-    <div class="welcome" id="welcome">
-      <h1>Welcome to Chingame AI</h1>
-      <p>What can I help you with today?</p>
+  <header class="topbar">
+    <div class="top-left">
+      <button class="icon-button" id="mobileMenu" title="Toggle sidebar">☰</button>
+      <div class="top-title">Chingame AI</div>
+    </div>
+    <select class="model-select" id="modelSelect" title="Choose AI model">
+      <option value="openai/gpt-oss-20b">GPT-OSS 20B</option>
+      <option value="openai/gpt-oss-120b">GPT-OSS 120B</option>
+    </select>
+  </header>
+
+  <section class="chat-scroll" id="chatScroll">
+    <div class="chat-content" id="chatContent"></div>
+  </section>
+
+  <div class="composer-wrap">
+    <form class="composer" id="chatForm">
+      <div class="composer-box">
+        <textarea id="prompt" rows="1" placeholder="Message Chingame AI..." autocomplete="off"></textarea>
+        <button class="send-button" id="sendButton" type="submit">↑ Send</button>
+      </div>
+      <div class="disclaimer">Chingame AI can make mistakes. Check important information.</div>
+    </form>
+  </div>
+</main>
+
+<div class="overlay" id="settingsOverlay">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Personalization settings</h2>
+      <button class="close-button" data-close="settingsOverlay">×</button>
+    </div>
+    <div class="field">
+      <label for="instructions">Custom instructions</label>
+      <textarea id="instructions" placeholder="Tell Chingame AI how you want it to respond. For example: Be concise, explain your reasoning, and challenge incorrect assumptions."></textarea>
+    </div>
+    <div class="field">
+      <label for="defaultModel">Default AI model</label>
+      <select id="defaultModel">
+        <option value="openai/gpt-oss-20b">GPT-OSS 20B</option>
+        <option value="openai/gpt-oss-120b">GPT-OSS 120B</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Local data</label>
+      <p style="font-size:12px;color:#999;line-height:1.6">
+        Your conversations, custom instructions, and memories are stored in this browser.
+        Clearing browser data may erase them. They are not synced across devices.
+      </p>
+    </div>
+    <div class="modal-actions">
+      <button class="action-button secondary" id="clearData">Clear all local data</button>
+      <button class="action-button" id="saveSettings">Save settings</button>
     </div>
   </div>
-  <form class="input-area" id="chatForm">
-    <input id="prompt" placeholder="Message Chingame AI..." autocomplete="off">
-    <button class="send" id="sendButton" type="submit">Send</button>
-  </form>
-</main>
+</div>
+
+<div class="overlay" id="memoryOverlay">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>My memories</h2>
+      <button class="close-button" data-close="memoryOverlay">×</button>
+    </div>
+    <p style="font-size:13px;color:#999;line-height:1.6">
+      Add facts you want Chingame AI to use in future conversations.
+      Memories are stored in this browser and sent with your chat messages.
+    </p>
+    <div class="field">
+      <label for="newMemory">Add a memory</label>
+      <input id="newMemory" placeholder="Example: I prefer detailed explanations.">
+    </div>
+    <div class="modal-actions">
+      <button class="action-button" id="addMemory">Add memory</button>
+    </div>
+    <div class="section-label">Saved memories</div>
+    <div class="memory-list" id="memoryList"></div>
+  </div>
+</div>
+
+<div class="overlay" id="renameOverlay">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Rename conversation</h2>
+      <button class="close-button" data-close="renameOverlay">×</button>
+    </div>
+    <div class="field">
+      <label for="renameInput">Conversation title</label>
+      <input id="renameInput" maxlength="80">
+    </div>
+    <div class="modal-actions">
+      <button class="action-button secondary" data-close="renameOverlay">Cancel</button>
+      <button class="action-button" id="saveRename">Save name</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
 
 <script>
 const WORKER_URL = "https://chingame-ai.bmoonswift.workers.dev/";
+const STORAGE_KEY = "chingame_ai_data_v2";
 
-const messagesElement = document.getElementById("messages");
-const form = document.getElementById("chatForm");
-const input = document.getElementById("prompt");
-const sendButton = document.getElementById("sendButton");
+const $ = id => document.getElementById(id);
+const chatContent = $("chatContent");
+const chatList = $("chatList");
+const promptBox = $("prompt");
+const sendButton = $("sendButton");
 
-let conversation = [];
+let data = loadData();
+let currentChatId = data.chats[0]?.id || null;
 let busy = false;
+let renameTarget = null;
 
-form.addEventListener("submit", async (event) => {
-  event.preventDefault();
+function makeId() {
+  return (crypto.randomUUID ? crypto.randomUUID() :
+    Date.now().toString(36) + Math.random().toString(36).slice(2));
+}
 
-  const prompt = input.value.trim();
-  if (!prompt || busy) return;
+function loadData() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    if (saved && Array.isArray(saved.chats)) {
+      return {
+        chats: saved.chats,
+        memories: Array.isArray(saved.memories) ? saved.memories : [],
+        instructions: typeof saved.instructions === "string" ? saved.instructions : "",
+        model: saved.model || "openai/gpt-oss-20b"
+      };
+    }
+  } catch (e) {}
+  return { chats: [], memories: [], instructions: "", model: "openai/gpt-oss-20b" };
+}
 
-  document.getElementById("welcome")?.remove();
+function saveData() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  } catch (e) {
+    showToast("Could not save. Your browser storage may be full.");
+  }
+}
 
-  conversation.push({ role: "user", content: prompt });
-  addMessage("You", prompt, "user");
-  input.value = "";
+function currentChat() {
+  return data.chats.find(chat => chat.id === currentChatId);
+}
+
+function createChat() {
+  const chat = {
+    id: makeId(),
+    title: "New chat",
+    messages: [],
+    updated: Date.now()
+  };
+  data.chats.unshift(chat);
+  currentChatId = chat.id;
+  saveData();
+  renderAll();
+  promptBox.focus();
+}
+
+function renderAll() {
+  renderChatList();
+  renderConversation();
+}
+
+function renderChatList() {
+  const query = $("chatSearch").value.toLowerCase().trim();
+  chatList.innerHTML = "";
+
+  const chats = [...data.chats].sort((a,b) => b.updated - a.updated)
+    .filter(chat => chat.title.toLowerCase().includes(query));
+
+  if (!chats.length) {
+    chatList.innerHTML = '<div class="empty-note">No conversations yet.</div>';
+    return;
+  }
+
+  chats.forEach(chat => {
+    const row = document.createElement("div");
+    row.className = "chat-item" + (chat.id === currentChatId ? " active" : "");
+
+    const open = document.createElement("button");
+    open.className = "chat-open";
+    open.textContent = chat.title;
+    open.title = chat.title;
+    open.addEventListener("click", () => {
+      currentChatId = chat.id;
+      renderAll();
+    });
+
+    const rename = document.createElement("button");
+    rename.className = "chat-action";
+    rename.textContent = "✎";
+    rename.title = "Rename";
+    rename.addEventListener("click", () => openRename(chat.id));
+
+    const remove = document.createElement("button");
+    remove.className = "chat-action";
+    remove.textContent = "×";
+    remove.title = "Delete";
+    remove.addEventListener("click", () => deleteChat(chat.id));
+
+    row.append(open, rename, remove);
+    chatList.appendChild(row);
+  });
+}
+
+function renderConversation() {
+  chatContent.innerHTML = "";
+  const chat = currentChat();
+
+  if (!chat || !chat.messages.length) {
+    const welcome = document.createElement("div");
+    welcome.className = "welcome";
+    welcome.innerHTML = `
+      <div class="welcome-mark">C</div>
+      <h1>What can I help you with?</h1>
+      <p>Your personal AI, ready when you are.</p>
+      <div class="suggestions">
+        <button class="suggestion" data-prompt="Help me brainstorm an idea">Brainstorm ideas</button>
+        <button class="suggestion" data-prompt="Explain a difficult topic simply">Explain something</button>
+        <button class="suggestion" data-prompt="Help me make a plan">Make a plan</button>
+      </div>`;
+    chatContent.appendChild(welcome);
+    welcome.querySelectorAll("[data-prompt]").forEach(button => {
+      button.addEventListener("click", () => {
+        promptBox.value = button.dataset.prompt;
+        sendMessage();
+      });
+    });
+    return;
+  }
+
+  chat.messages.forEach((message, index) => {
+    chatContent.appendChild(makeMessageElement(message, index));
+  });
+  $("chatScroll").scrollTop = $("chatScroll").scrollHeight;
+}
+
+function makeMessageElement(message, index) {
+  const row = document.createElement("div");
+  row.className = "message-row";
+
+  const avatar = document.createElement("div");
+  avatar.className = "avatar" + (message.role === "assistant" ? " ai" : "");
+  avatar.textContent = message.role === "assistant" ? "C" : "Y";
+
+  const body = document.createElement("div");
+  body.className = "message-body";
+
+  const name = document.createElement("div");
+  name.className = "message-name";
+  name.textContent = message.role === "assistant" ? "Chingame AI" : "You";
+
+  const text = document.createElement("div");
+  text.className = "message-text";
+  text.textContent = message.content;
+
+  body.append(name, text);
+
+  if (message.role === "assistant" && !message.pending) {
+    const tools = document.createElement("div");
+    tools.className = "message-tools";
+
+    const copy = document.createElement("button");
+    copy.textContent = "Copy";
+    copy.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(message.content);
+        showToast("Copied to clipboard");
+      } catch (e) { showToast("Copy wasn't available in this browser."); }
+    });
+    tools.appendChild(copy);
+
+    if (index === currentChat()?.messages.length - 1) {
+      const regenerate = document.createElement("button");
+      regenerate.textContent = "Regenerate";
+      regenerate.addEventListener("click", regenerateResponse);
+      tools.appendChild(regenerate);
+    }
+    body.appendChild(tools);
+  }
+
+  row.append(avatar, body);
+  return row;
+}
+
+function addMessage(role, content, pending = false) {
+  const chat = currentChat();
+  if (!chat) return;
+  chat.messages.push({ role, content, pending });
+  chat.updated = Date.now();
+  saveData();
+  renderAll();
+}
+
+async function sendMessage() {
+  if (busy) return;
+  const prompt = promptBox.value.trim();
+  if (!prompt) return;
+
+  if (!currentChat()) createChat();
+  const chat = currentChat();
+
+  if (!chat.messages.length) {
+    chat.title = prompt.length > 35 ? prompt.slice(0,35) + "…" : prompt;
+  }
+
+  chat.messages.push({ role:"user", content:prompt });
+  chat.updated = Date.now();
+  promptBox.value = "";
+  promptBox.style.height = "auto";
+  saveData();
+  await requestAI();
+}
+
+async function requestAI() {
+  const chat = currentChat();
+  if (!chat) return;
 
   busy = true;
   sendButton.disabled = true;
-  sendButton.textContent = "Thinking...";
-
-  const loadingMessage = addMessage("Chingame AI", "Thinking...", "ai");
+  sendButton.textContent = "…";
+  const pending = { role:"assistant", content:"Thinking…", pending:true };
+  chat.messages.push(pending);
+  renderAll();
 
   try {
     const response = await fetch(WORKER_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        messages: conversation.slice(-20)
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body:JSON.stringify({
+        messages:chat.messages
+          .filter(message => !message.pending)
+          .slice(-30)
+          .map(message => ({ role:message.role, content:message.content })),
+        model:$("modelSelect").value,
+        customInstructions:data.instructions,
+        memories:data.memories
       })
     });
 
-    const data = await response.json();
+    const result = await response.json();
 
     if (!response.ok) {
-      throw new Error(data.error || "The AI request failed.");
+      throw new Error(result.error || "The AI service returned an error.");
     }
 
-    if (!data.reply) {
+    if (typeof result.reply !== "string" || !result.reply.trim()) {
       throw new Error("The AI returned an empty response.");
     }
 
-    loadingMessage.textContent = "Chingame AI: " + data.reply;
-    conversation.push({ role: "assistant", content: data.reply });
-    conversation = conversation.slice(-20);
-
+    const latest = currentChat();
+    if (latest) {
+      latest.messages = latest.messages.filter(message => !message.pending);
+      latest.messages.push({ role:"assistant", content:result.reply });
+      latest.updated = Date.now();
+    }
   } catch (error) {
-    loadingMessage.textContent = "Chingame AI: " + error.message;
+    const latest = currentChat();
+    if (latest) {
+      latest.messages = latest.messages.filter(message => !message.pending);
+      latest.messages.push({
+        role:"assistant",
+        content:"I couldn't complete that request: " + error.message
+      });
+    }
   } finally {
     busy = false;
     sendButton.disabled = false;
-    sendButton.textContent = "Send";
-    input.focus();
-    messagesElement.scrollTop = messagesElement.scrollHeight;
+    sendButton.textContent = "↑ Send";
+    saveData();
+    renderAll();
+    promptBox.focus();
   }
+}
+
+function regenerateResponse() {
+  if (busy) return;
+  const chat = currentChat();
+  if (!chat || chat.messages.length < 2) return;
+
+  if (chat.messages[chat.messages.length - 1].role === "assistant") {
+    chat.messages.pop();
+  }
+  if (chat.messages[chat.messages.length - 1]?.role !== "user") {
+    showToast("There is no response to regenerate.");
+    return;
+  }
+  saveData();
+  requestAI();
+}
+
+function deleteChat(id) {
+  if (!confirm("Delete this conversation? This cannot be undone.")) return;
+  data.chats = data.chats.filter(chat => chat.id !== id);
+  if (currentChatId === id) currentChatId = data.chats[0]?.id || null;
+  saveData();
+  renderAll();
+}
+
+function openRename(id) {
+  renameTarget = id;
+  const chat = data.chats.find(item => item.id === id);
+  $("renameInput").value = chat?.title || "";
+  $("renameOverlay").classList.add("open");
+  $("renameInput").focus();
+}
+
+function showToast(message) {
+  const toast = $("toast");
+  toast.textContent = message;
+  toast.classList.add("show");
+  clearTimeout(showToast.timer);
+  showToast.timer = setTimeout(() => toast.classList.remove("show"), 2400);
+}
+
+function openOverlay(id) {
+  $(id).classList.add("open");
+}
+
+function closeOverlay(id) {
+  $(id).classList.remove("open");
+}
+
+function renderMemories() {
+  const list = $("memoryList");
+  list.innerHTML = "";
+  if (!data.memories.length) {
+    list.innerHTML = '<div class="empty-note">No saved memories yet.</div>';
+    return;
+  }
+  data.memories.forEach((memory, index) => {
+    const item = document.createElement("div");
+    item.className = "memory-item";
+    const text = document.createElement("span");
+    text.textContent = memory;
+    const remove = document.createElement("button");
+    remove.textContent = "Remove";
+    remove.addEventListener("click", () => {
+      data.memories.splice(index, 1);
+      saveData();
+      renderMemories();
+    });
+    item.append(text, remove);
+    list.appendChild(item);
+  });
+}
+
+$("newChat").addEventListener("click", createChat);
+$("chatForm").addEventListener("submit", event => {
+  event.preventDefault();
+  sendMessage();
 });
 
-function addMessage(name, text, type) {
-  const div = document.createElement("div");
-  div.className = "message " + type;
-  div.textContent = name + ": " + text;
-  messagesElement.appendChild(div);
-  messagesElement.scrollTop = messagesElement.scrollHeight;
-  return div;
-}
+promptBox.addEventListener("keydown", event => {
+  if (event.key === "Enter" && !event.shiftKey) {
+    event.preventDefault();
+    sendMessage();
+  }
+});
+promptBox.addEventListener("input", () => {
+  promptBox.style.height = "auto";
+  promptBox.style.height = Math.min(promptBox.scrollHeight, 180) + "px";
+});
 
-function newChat() {
-  if (busy) return;
-  conversation = [];
-  messagesElement.innerHTML = `
-    <div class="welcome" id="welcome">
-      <h1>Welcome to Chingame AI</h1>
-      <p>What can I help you with today?</p>
-    </div>`;
-}
+$("modelSelect").value = data.model;
+$("modelSelect").addEventListener("change", () => {
+  data.model = $("modelSelect").value;
+  saveData();
+  showToast("Model changed");
+});
+
+$("settingsButton").addEventListener("click", () => {
+  $("instructions").value = data.instructions;
+  $("defaultModel").value = data.model;
+  openOverlay("settingsOverlay");
+});
+$("saveSettings").addEventListener("click", () => {
+  data.instructions = $("instructions").value.trim();
+  data.model = $("defaultModel").value;
+  $("modelSelect").value = data.model;
+  saveData();
+  closeOverlay("settingsOverlay");
+  showToast("Settings saved");
+});
+
+$("memoryButton").addEventListener("click", () => {
+  renderMemories();
+  openOverlay("memoryOverlay");
+});
+$("addMemory").addEventListener("click", () => {
+  const value = $("newMemory").value.trim();
+  if (!value) return;
+  if (data.memories.length >= 30) {
+    showToast("Memory limit reached. Remove one first.");
+    return;
+  }
+  data.memories.push(value.slice(0,500));
+  $("newMemory").value = "";
+  saveData();
+  renderMemories();
+  showToast("Memory saved");
+});
+$("newMemory").addEventListener("keydown", event => {
+  if (event.key === "Enter") $("addMemory").click();
+});
+
+$("saveRename").addEventListener("click", () => {
+  const chat = data.chats.find(item => item.id === renameTarget);
+  const name = $("renameInput").value.trim();
+  if (chat && name) {
+    chat.title = name.slice(0,80);
+    saveData();
+    renderChatList();
+  }
+  closeOverlay("renameOverlay");
+});
+
+document.querySelectorAll("[data-close]").forEach(button => {
+  button.addEventListener("click", () => closeOverlay(button.dataset.close));
+});
+document.querySelectorAll(".overlay").forEach(overlay => {
+  overlay.addEventListener("click", event => {
+    if (event.target === overlay) overlay.classList.remove("open");
+  });
+});
+
+$("searchToggle").addEventListener("click", () => {
+  const search = $("chatSearch");
+  search.hidden = !search.hidden;
+  if (!search.hidden) search.focus();
+  else { search.value = ""; renderChatList(); }
+});
+$("chatSearch").addEventListener("input", renderChatList);
+
+$("collapseButton").addEventListener("click", () => {
+  $("sidebar").classList.toggle("collapsed");
+});
+$("mobileMenu").addEventListener("click", () => {
+  $("sidebar").classList.toggle("collapsed");
+});
+
+$("exportButton").addEventListener("click", () => {
+  const exportData = {
+    exportedAt:new Date().toISOString(),
+    chats:data.chats,
+    memories:data.memories,
+    instructions:data.instructions
+  };
+  const blob = new Blob([JSON.stringify(exportData,null,2)], {
+    type:"application/json"
+  });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "chingame-ai-backup.json";
+  link.click();
+  URL.revokeObjectURL(url);
+  showToast("Backup exported");
+});
+
+$("clearData").addEventListener("click", () => {
+  if (!confirm("This permanently deletes all chats, memories, and settings stored in this browser. Continue?")) return;
+  localStorage.removeItem(STORAGE_KEY);
+  data = { chats:[], memories:[], instructions:"", model:"openai/gpt-oss-20b" };
+  currentChatId = null;
+  $("modelSelect").value = data.model;
+  closeOverlay("settingsOverlay");
+  saveData();
+  renderAll();
+  showToast("Local data cleared");
+});
+
+renderAll();
 </script>
 </body>
 </html>
