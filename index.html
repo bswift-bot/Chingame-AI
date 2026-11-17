@@ -57,6 +57,7 @@ body {
   border-radius: 12px;
   line-height: 1.6;
   white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 .user { background: #303030; }
 .ai { background: #252525; }
@@ -87,6 +88,7 @@ input {
   padding: 10px 17px;
   cursor: pointer;
 }
+.send:disabled { opacity: 0.5; cursor: wait; }
 @media(max-width:600px) {
   .sidebar { width: 70px; padding: 12px 6px; }
   .logo { font-size: 10px; }
@@ -112,39 +114,86 @@ input {
   </div>
   <form class="input-area" id="chatForm">
     <input id="prompt" placeholder="Message Chingame AI..." autocomplete="off">
-    <button class="send" type="submit">Send</button>
+    <button class="send" id="sendButton" type="submit">Send</button>
   </form>
 </main>
 
 <script>
-const messages = document.getElementById("messages");
+const WORKER_URL = "https://chingame-ai.bmoonswift.workers.dev/";
+
+const messagesElement = document.getElementById("messages");
 const form = document.getElementById("chatForm");
 const input = document.getElementById("prompt");
+const sendButton = document.getElementById("sendButton");
 
-form.addEventListener("submit", (event) => {
+let conversation = [];
+let busy = false;
+
+form.addEventListener("submit", async (event) => {
   event.preventDefault();
+
   const prompt = input.value.trim();
-  if (!prompt) return;
+  if (!prompt || busy) return;
 
   document.getElementById("welcome")?.remove();
+
+  conversation.push({ role: "user", content: prompt });
   addMessage("You", prompt, "user");
   input.value = "";
 
-  addMessage("Chingame AI",
-    "Your website interface is working! The AI model still needs to be connected.",
-    "ai");
+  busy = true;
+  sendButton.disabled = true;
+  sendButton.textContent = "Thinking...";
+
+  const loadingMessage = addMessage("Chingame AI", "Thinking...", "ai");
+
+  try {
+    const response = await fetch(WORKER_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        messages: conversation.slice(-20)
+      })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || "The AI request failed.");
+    }
+
+    if (!data.reply) {
+      throw new Error("The AI returned an empty response.");
+    }
+
+    loadingMessage.textContent = "Chingame AI: " + data.reply;
+    conversation.push({ role: "assistant", content: data.reply });
+    conversation = conversation.slice(-20);
+
+  } catch (error) {
+    loadingMessage.textContent = "Chingame AI: " + error.message;
+  } finally {
+    busy = false;
+    sendButton.disabled = false;
+    sendButton.textContent = "Send";
+    input.focus();
+    messagesElement.scrollTop = messagesElement.scrollHeight;
+  }
 });
 
 function addMessage(name, text, type) {
   const div = document.createElement("div");
   div.className = "message " + type;
   div.textContent = name + ": " + text;
-  messages.appendChild(div);
-  messages.scrollTop = messages.scrollHeight;
+  messagesElement.appendChild(div);
+  messagesElement.scrollTop = messagesElement.scrollHeight;
+  return div;
 }
 
 function newChat() {
-  messages.innerHTML = `
+  if (busy) return;
+  conversation = [];
+  messagesElement.innerHTML = `
     <div class="welcome" id="welcome">
       <h1>Welcome to Chingame AI</h1>
       <p>What can I help you with today?</p>
