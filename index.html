@@ -5,876 +5,1138 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Chingame AI</title>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3.2.6/dist/purify.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.9.0/mammoth.browser.min.js"></script>
 <style>
 :root {
-  --bg:#212121; --side:#171717; --panel:#2b2b2b;
-  --border:#414141; --text:#f3f3f3; --muted:#999;
+  color-scheme: dark;
+  --bg:#101114;
+  --sidebar:#17181d;
+  --panel:#202127;
+  --panel2:#292b33;
+  --border:#343640;
+  --text:#f2f2f5;
+  --muted:#999ba8;
+  --accent:#8b78ff;
+  --accent2:#6b5ce7;
+  --danger:#e66b76;
 }
-* { box-sizing:border-box; }
+* {box-sizing:border-box}
 body {
-  margin:0;height:100vh;overflow:hidden;display:flex;
-  background:var(--bg);color:var(--text);
-  font-family:Inter,Arial,sans-serif;
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
+  font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  height:100vh;
+  overflow:hidden;
 }
-button,input,textarea,select { font:inherit; }
-button { cursor:pointer; }
-button:disabled { opacity:.5;cursor:not-allowed; }
+button,input,textarea,select {font:inherit}
+button {cursor:pointer}
+.app {display:flex;height:100vh;width:100%}
 .sidebar {
-  width:280px;flex-shrink:0;background:var(--side);
-  display:flex;flex-direction:column;padding:17px 13px;
-  border-right:1px solid #292929;transition:width .2s;
+  width:260px;
+  flex-shrink:0;
+  background:var(--sidebar);
+  border-right:1px solid var(--border);
+  display:flex;
+  flex-direction:column;
+  padding:17px 13px;
+  transition:transform .2s;
+  z-index:5;
 }
-.sidebar.collapsed { width:76px; }
 .brand {
-  display:flex;align-items:center;gap:11px;padding:7px 8px 23px;
-  font-size:21px;font-weight:750;white-space:nowrap;overflow:hidden;
+  display:flex;align-items:center;gap:10px;
+  font-size:19px;font-weight:750;
+  padding:5px 7px 22px;
 }
-.brand-mark {
-  width:34px;height:34px;border-radius:11px;display:grid;
-  place-items:center;flex-shrink:0;color:#111;background:#eee;font-weight:900;
+.logo {
+  width:34px;height:34px;border-radius:11px;
+  background:linear-gradient(135deg,#9d8cff,#5744c8);
+  display:grid;place-items:center;font-weight:900;
 }
-.sidebar-button {
-  width:100%;padding:11px 12px;border:1px solid transparent;
-  border-radius:10px;background:transparent;color:var(--text);
-  text-align:left;display:flex;align-items:center;gap:11px;
-  margin-bottom:6px;white-space:nowrap;overflow:hidden;
+.new-chat,.side-button {
+  border:1px solid var(--border);
+  color:var(--text);background:transparent;
+  border-radius:10px;padding:11px 12px;
+  text-align:left;width:100%;margin-bottom:9px;
 }
-.sidebar-button:hover,.chat-item:hover { background:#292929; }
-.sidebar-button.primary { background:#292929;border-color:#414141; }
-.sidebar-button .symbol { width:20px;text-align:center;flex-shrink:0; }
-.section-label {
-  color:#777;font-size:11px;text-transform:uppercase;
-  letter-spacing:1px;padding:23px 10px 9px;
+.new-chat:hover,.side-button:hover {background:var(--panel2)}
+.side-label {
+  color:var(--muted);font-size:11px;
+  text-transform:uppercase;letter-spacing:1px;
+  padding:20px 8px 8px;
 }
-.search-box {
-  width:100%;background:#242424;border:1px solid #383838;
-  border-radius:9px;padding:10px;color:white;outline:none;margin:8px 0 4px;
+.history {overflow:auto;flex:1}
+.history-item {
+  display:flex;align-items:center;gap:7px;
+  padding:10px;border-radius:8px;
+  color:#d2d2dc;font-size:13px;cursor:pointer;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }
-.chat-list { flex:1;overflow-y:auto;min-height:0; }
-.chat-item {
-  display:flex;align-items:center;gap:4px;border-radius:9px;
-  padding:4px;margin:3px 0;
+.history-item:hover,.history-item.active {background:var(--panel2)}
+.history-item span {overflow:hidden;text-overflow:ellipsis}
+.history-delete {
+  margin-left:auto;color:var(--muted);
+  background:none;border:0;padding:2px 5px;
 }
-.chat-item.active { background:#303030; }
-.chat-open {
-  flex:1;min-width:0;padding:8px 5px;border:0;background:transparent;
-  color:#ddd;text-align:left;overflow:hidden;text-overflow:ellipsis;
-  white-space:nowrap;font-size:13px;
-}
-.chat-action {
-  border:0;background:transparent;color:#999;
-  border-radius:6px;padding:6px;font-size:13px;
-}
-.chat-action:hover { background:#414141;color:white; }
-.sidebar-bottom { border-top:1px solid #303030;padding-top:10px; }
-.main {
-  flex:1;min-width:0;display:flex;flex-direction:column;
-  height:100vh;position:relative;
-}
+.side-bottom {border-top:1px solid var(--border);padding-top:12px}
+.main {flex:1;min-width:0;display:flex;flex-direction:column;position:relative}
 .topbar {
-  height:59px;flex-shrink:0;display:flex;align-items:center;
-  justify-content:space-between;padding:0 23px;border-bottom:1px solid #303030;
+  height:62px;flex-shrink:0;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 22px;gap:10px;
 }
-.top-left { display:flex;align-items:center;gap:12px; }
-.top-title { font-size:15px;font-weight:650; }
+.top-left,.top-right {display:flex;align-items:center;gap:10px}
 .model-select {
-  background:#303030;border:1px solid #454545;color:#ddd;
-  padding:7px 10px;border-radius:8px;max-width:190px;
+  background:var(--panel);color:var(--text);
+  border:1px solid var(--border);border-radius:9px;
+  padding:8px 10px;max-width:220px;
 }
 .icon-button {
-  background:transparent;color:#ccc;border:1px solid transparent;
-  border-radius:8px;padding:8px 10px;
+  border:1px solid var(--border);background:var(--panel);
+  color:var(--text);border-radius:9px;
+  min-width:36px;height:36px;padding:0 10px;
 }
-.icon-button:hover { background:#303030;border-color:#444; }
-.chat-scroll { flex:1;overflow-y:auto;width:100%;padding:28px 20px 20px; }
-.chat-content { max-width:850px;margin:0 auto; }
+.icon-button:hover {background:var(--panel2)}
+.web-toggle {font-size:12px}
+.web-toggle.active {background:#403775;border-color:#8b78ff}
+.chat-area {
+  flex:1;overflow-y:auto;padding:35px 18px 170px;
+  scroll-behavior:smooth;
+}
 .welcome {
-  min-height:55vh;display:flex;flex-direction:column;
-  justify-content:center;align-items:center;text-align:center;
+  max-width:760px;margin:12vh auto 0;text-align:center;
 }
-.welcome-mark {
-  width:65px;height:65px;border-radius:22px;background:#eee;color:#111;
-  display:grid;place-items:center;font-size:30px;font-weight:900;margin-bottom:23px;
-}
-.welcome h1 { font-size:32px;margin:0 0 10px;letter-spacing:-1px; }
-.welcome p { color:var(--muted);margin:0; }
+.welcome h1 {font-size:36px;letter-spacing:-1.5px;margin:0 0 12px}
+.welcome p {color:var(--muted);font-size:15px}
 .suggestions {
-  display:flex;gap:9px;flex-wrap:wrap;justify-content:center;margin-top:28px;
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px;margin-top:32px;text-align:left;
 }
 .suggestion {
-  background:#292929;border:1px solid #444;color:#ccc;
-  border-radius:20px;padding:10px 14px;font-size:13px;
+  background:var(--panel);border:1px solid var(--border);
+  border-radius:13px;padding:15px;color:var(--text);
+  cursor:pointer;font-size:13px;
 }
-.suggestion:hover { background:#383838; }
-.message-row { display:flex;margin:18px 0 24px;gap:12px; }
+.suggestion:hover {border-color:var(--accent)}
+.messages {max-width:850px;margin:0 auto}
+.message {display:flex;gap:13px;margin:25px 0;align-items:flex-start}
 .avatar {
-  width:32px;height:32px;flex-shrink:0;border-radius:50%;
-  display:grid;place-items:center;background:#3b3b3b;font-size:13px;font-weight:700;
+  width:32px;height:32px;border-radius:10px;flex-shrink:0;
+  display:grid;place-items:center;font-size:12px;font-weight:800;
+  background:var(--panel2);
 }
-.avatar.ai { background:#eee;color:#111; }
-.message-body { flex:1;min-width:0; }
-.message-name { font-size:13px;color:#aaa;margin:5px 0 8px; }
-.message-text {
-  white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.75;
-  font-size:15px;color:#eee;
+.message.user .avatar {background:#3d365f}
+.message-content {min-width:0;flex:1;line-height:1.65;font-size:14px;overflow-wrap:anywhere}
+.message-content p {margin:0 0 12px}
+.message-content p:last-child {margin-bottom:0}
+.message-content pre {
+  background:#15161b;border:1px solid var(--border);
+  border-radius:10px;padding:14px;overflow:auto;
 }
-.message-tools { display:flex;gap:6px;margin-top:9px; }
-.message-tools button {
-  background:transparent;border:1px solid transparent;
-  color:#888;border-radius:6px;padding:5px 8px;font-size:12px;
+.message-content code {
+  background:#292a32;border-radius:4px;padding:2px 5px;
+  font-size:.9em;
 }
-.message-tools button:hover { background:#303030;color:white; }
-.generated-image {
-  display:block;width:100%;max-width:650px;height:auto;
-  border-radius:13px;margin-top:12px;border:1px solid #444;
+.message-content pre code {background:none;padding:0}
+.message-content blockquote {
+  border-left:3px solid var(--accent);padding-left:13px;color:#c4c3d0;
 }
-.download-link {
-  display:inline-block;margin-top:10px;color:#ddd;font-size:13px;
+.message-content a {color:#a99bff}
+.message-content img {max-width:100%;border-radius:12px}
+.message-actions {display:flex;gap:7px;margin-top:9px}
+.message-actions button {
+  background:transparent;border:1px solid var(--border);
+  color:var(--muted);border-radius:7px;padding:5px 8px;font-size:11px;
 }
-.typing { color:#aaa;font-size:14px;padding:10px 0; }
-.composer-wrap { padding:12px 20px 23px;flex-shrink:0; }
-.composer { max-width:850px;margin:auto; }
-.composer-box {
-  display:flex;align-items:flex-end;gap:10px;background:#303030;
-  border:1px solid #555;border-radius:17px;padding:12px;box-shadow:0 5px 25px #0002;
+.message-actions button:hover {color:var(--text);background:var(--panel)}
+.typing {color:var(--muted);font-size:13px}
+.composer-wrap {
+  position:absolute;bottom:0;left:0;right:0;
+  padding:15px 18px 20px;
+  background:linear-gradient(transparent,var(--bg) 22%);
 }
-.composer-box:focus-within { border-color:#777; }
+.composer {max-width:850px;margin:0 auto}
+.attachment-preview {
+  display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px;
+}
+.attachment {
+  display:flex;align-items:center;gap:7px;
+  background:var(--panel);border:1px solid var(--border);
+  padding:7px 10px;border-radius:9px;font-size:12px;
+}
+.attachment button {background:none;border:0;color:var(--muted)}
+.input-box {
+  background:var(--panel);border:1px solid #444550;
+  border-radius:17px;padding:11px 12px 9px;
+  box-shadow:0 10px 35px #0005;
+}
+.input-box:focus-within {border-color:#8171ed}
 #prompt {
-  flex:1;min-width:0;max-height:180px;resize:none;border:0;outline:0;
-  background:transparent;color:white;font-size:15px;line-height:1.5;padding:5px 3px;
+  width:100%;resize:none;outline:none;border:0;
+  background:transparent;color:var(--text);
+  min-height:45px;max-height:180px;padding:5px 4px;
+  font-size:14px;line-height:1.5;
 }
-#prompt::placeholder { color:#888; }
-.send-button,.image-button {
-  border-radius:10px;padding:10px 13px;font-weight:650;white-space:nowrap;
+#prompt::placeholder {color:#858694}
+.input-tools {display:flex;align-items:center;gap:7px}
+.tool-button {
+  background:transparent;border:0;color:var(--muted);
+  border-radius:8px;padding:8px;font-size:12px;
 }
-.send-button { border:0;background:#eee;color:#111; }
-.send-button:hover { background:white; }
-.image-button { border:1px solid #555;background:#414141;color:white; }
-.image-button:hover { background:#505050; }
-.disclaimer { text-align:center;color:#777;font-size:11px;margin-top:10px; }
+.tool-button:hover {background:var(--panel2);color:var(--text)}
+.tool-button.active {color:#b2a5ff;background:#3b345e}
+.send-button {
+  margin-left:auto;background:var(--accent2);color:white;
+  border:0;border-radius:10px;width:37px;height:37px;
+  font-size:17px;font-weight:700;
+}
+.send-button:hover {background:var(--accent)}
+.send-button:disabled {opacity:.4;cursor:not-allowed}
+.disclaimer {
+  text-align:center;color:#777986;font-size:10px;
+  padding-top:9px;
+}
+.source-list {
+  margin-top:12px;padding:11px;background:var(--panel);
+  border:1px solid var(--border);border-radius:10px;
+}
+.source-list strong {font-size:12px}
+.source-list a {
+  display:block;font-size:12px;margin-top:7px;
+  color:#a99bff;text-decoration:none;
+}
+.generated-image {max-width:100%;border-radius:12px;margin-top:10px}
 .overlay {
-  position:fixed;inset:0;background:#0009;z-index:10;display:none;
-  align-items:center;justify-content:center;padding:15px;
+  display:none;position:fixed;inset:0;background:#0009;
+  z-index:10;align-items:center;justify-content:center;padding:15px;
 }
-.overlay.open { display:flex; }
+.overlay.open {display:flex}
 .modal {
-  width:100%;max-width:540px;max-height:85vh;overflow:auto;
-  background:#202020;border:1px solid #444;border-radius:16px;
-  padding:22px;box-shadow:0 20px 70px #0009;
+  width:min(520px,100%);max-height:85vh;overflow:auto;
+  background:var(--sidebar);border:1px solid var(--border);
+  border-radius:16px;padding:22px;
 }
-.modal-header {
-  display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;
+.modal h2 {margin:0 0 18px;font-size:19px}
+.modal label {display:block;color:var(--muted);font-size:12px;margin:14px 0 6px}
+.modal input,.modal textarea,.modal select {
+  width:100%;background:var(--panel);color:var(--text);
+  border:1px solid var(--border);border-radius:9px;padding:10px;
 }
-.modal-header h2 { margin:0;font-size:20px; }
-.close-button { background:transparent;color:#aaa;border:0;font-size:22px; }
-.field { margin:17px 0; }
-.field label { display:block;color:#ccc;font-size:13px;margin-bottom:8px; }
-.field input,.field textarea,.field select {
-  width:100%;padding:11px;color:white;background:#303030;
-  border:1px solid #494949;border-radius:9px;outline:none;
+.modal textarea {min-height:95px;resize:vertical}
+.modal-actions {display:flex;justify-content:flex-end;gap:8px;margin-top:18px}
+.primary {
+  background:var(--accent2);color:white;border:0;
+  border-radius:9px;padding:10px 14px;
 }
-.field textarea { min-height:105px;resize:vertical;line-height:1.5; }
-.modal-actions { display:flex;gap:9px;justify-content:flex-end;margin-top:20px; }
-.action-button {
-  background:#eee;color:#111;border:0;border-radius:8px;padding:10px 14px;font-weight:650;
+.secondary {
+  background:var(--panel2);color:var(--text);
+  border:1px solid var(--border);border-radius:9px;padding:10px 14px;
 }
-.action-button.secondary { background:#333;border:1px solid #505050;color:white; }
-.memory-list { display:flex;flex-direction:column;gap:8px; }
-.memory-item {
-  display:flex;align-items:center;gap:8px;background:#303030;
-  border:1px solid #444;border-radius:9px;padding:10px;
-}
-.memory-item span { flex:1;font-size:13px;overflow-wrap:anywhere; }
-.memory-item button { background:transparent;color:#e99;border:0;padding:5px; }
-.empty-note { color:#888;font-size:13px;padding:12px 0; }
-.toast {
-  position:fixed;bottom:95px;left:50%;transform:translateX(-50%);
-  background:#eee;color:#111;padding:10px 16px;border-radius:9px;
-  font-size:13px;display:none;z-index:20;
-}
-.toast.show { display:block; }
-.sidebar.collapsed .brand-name,
-.sidebar.collapsed .button-label,
-.sidebar.collapsed .section-label,
-.sidebar.collapsed .search-box,
-.sidebar.collapsed .chat-list { display:none; }
-.sidebar.collapsed .sidebar-button { justify-content:center;padding:12px 5px; }
+.status {font-size:12px;color:var(--muted);padding:7px 2px;min-height:24px}
+.voice-indicator {color:#c1b4ff;font-size:12px;display:none}
+#fileInput {display:none}
+.mobile-menu {display:none}
 @media(max-width:700px) {
-  .sidebar { width:76px;padding:13px 7px; }
-  .sidebar .brand-name,.sidebar .button-label,.sidebar .section-label,
-  .sidebar .search-box,.sidebar .chat-list { display:none; }
-  .sidebar .sidebar-button { justify-content:center;padding:12px 5px; }
-  .brand { padding:7px 12px 22px; }
-  .topbar { padding:0 12px; }
-  .chat-scroll { padding:18px 13px; }
-  .composer-wrap { padding:8px 12px 15px; }
-  .welcome h1 { font-size:26px; }
-  .model-select { max-width:145px;font-size:12px; }
-  .composer-box { gap:6px;padding:8px; }
-  .image-button,.send-button { padding:9px 10px;font-size:12px; }
+  .sidebar {position:fixed;top:0;bottom:0;left:0;transform:translateX(-100%)}
+  .sidebar.open {transform:translateX(0)}
+  .mobile-menu {display:inline-block}
+  .topbar {padding:0 12px}
+  .chat-area {padding:20px 12px 165px}
+  .composer-wrap {padding:10px 10px 14px}
+  .welcome {margin-top:9vh}
+  .welcome h1 {font-size:29px}
+  .suggestions {grid-template-columns:1fr}
+  .model-select {max-width:145px;font-size:11px}
+  .top-right {gap:5px}
 }
 </style>
 </head>
 <body>
-
-<aside class="sidebar" id="sidebar">
-  <div class="brand">
-    <div class="brand-mark">C</div>
-    <span class="brand-name">Chingame AI</span>
-  </div>
-  <button class="sidebar-button primary" id="newChat">
-    <span class="symbol">＋</span><span class="button-label">New chat</span>
-  </button>
-  <button class="sidebar-button" id="searchToggle">
-    <span class="symbol">⌕</span><span class="button-label">Search chats</span>
-  </button>
-  <input class="search-box" id="chatSearch" placeholder="Search conversations..." hidden>
-  <div class="section-label">Your conversations</div>
-  <div class="chat-list" id="chatList"></div>
-  <div class="sidebar-bottom">
-    <button class="sidebar-button" id="memoryButton">
-      <span class="symbol">✧</span><span class="button-label">My memories</span>
-    </button>
-    <button class="sidebar-button" id="settingsButton">
-      <span class="symbol">⚙</span><span class="button-label">Settings</span>
-    </button>
-    <button class="sidebar-button" id="exportButton">
-      <span class="symbol">⇩</span><span class="button-label">Export chats</span>
-    </button>
-    <button class="sidebar-button" id="collapseButton">
-      <span class="symbol">☰</span><span class="button-label">Collapse sidebar</span>
-    </button>
-  </div>
-</aside>
-
-<main class="main">
-  <header class="topbar">
-    <div class="top-left">
-      <button class="icon-button" id="mobileMenu" title="Toggle sidebar">☰</button>
-      <div class="top-title">Chingame AI</div>
+<div class="app">
+  <aside class="sidebar" id="sidebar">
+    <div class="brand"><div class="logo">C</div> Chingame AI</div>
+    <button class="new-chat" id="newChat">＋ New chat</button>
+    <div class="side-label">Your conversations</div>
+    <div class="history" id="history"></div>
+    <div class="side-bottom">
+      <button class="side-button" id="settingsButton">⚙ Settings</button>
+      <button class="side-button" id="exportButton">⇩ Export conversations</button>
+      <div class="status" id="saveStatus">Your chats are saved in this browser.</div>
     </div>
-    <select class="model-select" id="modelSelect" title="Choose AI model">
-      <option value="openai/gpt-oss-20b">GPT-OSS 20B</option>
-      <option value="openai/gpt-oss-120b">GPT-OSS 120B</option>
-    </select>
-  </header>
-  <section class="chat-scroll" id="chatScroll">
-    <div class="chat-content" id="chatContent"></div>
-  </section>
-  <div class="composer-wrap">
-    <form class="composer" id="chatForm">
-      <div class="composer-box">
-        <textarea id="prompt" rows="1" placeholder="Message Chingame AI..." autocomplete="off"></textarea>
-        <button class="image-button" id="imageButton" type="button">✧ Image</button>
-        <button class="send-button" id="sendButton" type="submit">↑ Send</button>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div class="top-left">
+        <button class="icon-button mobile-menu" id="menuButton">☰</button>
+        <select class="model-select" id="modelSelect">
+          <option value="openai/gpt-oss-20b">Chingame AI · Standard</option>
+          <option value="openai/gpt-oss-120b">Chingame AI · Advanced</option>
+        </select>
       </div>
-      <div class="disclaimer">Chingame AI can make mistakes. Check important information.</div>
-    </form>
-  </div>
-</main>
+      <div class="top-right">
+        <button class="icon-button web-toggle" id="webButton">◎ Web</button>
+        <button class="icon-button" id="clearButton" title="New chat">＋</button>
+      </div>
+    </header>
+
+    <section class="chat-area" id="chatArea">
+      <div class="welcome" id="welcome">
+        <h1>What can I help with?</h1>
+        <p>Your personal AI assistant. Ask anything, explore ideas, or get something done.</p>
+        <div class="suggestions">
+          <button class="suggestion" data-prompt="Explain a difficult topic to me step by step.">✦ Explain something complicated</button>
+          <button class="suggestion" data-prompt="Help me brainstorm some creative ideas.">✧ Brainstorm creative ideas</button>
+          <button class="suggestion" data-prompt="Help me research a topic and summarize the important information.">⌕ Research a topic</button>
+          <button class="suggestion" data-prompt="Help me write or improve something.">✎ Write something with me</button>
+        </div>
+      </div>
+      <div class="messages" id="messages"></div>
+    </section>
+
+    <div class="composer-wrap">
+      <div class="composer">
+        <div class="attachment-preview" id="attachmentPreview"></div>
+        <div class="input-box">
+          <textarea id="prompt" rows="1" placeholder="Message Chingame AI..."></textarea>
+          <div class="input-tools">
+            <button class="tool-button" id="uploadButton">＋ Attach</button>
+            <button class="tool-button" id="imageButton">▧ Image</button>
+            <button class="tool-button" id="voiceButton">🎙 Talk</button>
+            <span class="voice-indicator" id="voiceIndicator">Listening...</span>
+            <button class="send-button" id="sendButton" title="Send">↑</button>
+          </div>
+        </div>
+        <div class="disclaimer">Chingame AI can make mistakes. Check important information.</div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<input type="file" id="fileInput" multiple accept=".txt,.md,.pdf,.docx,.png,.jpg,.jpeg,.webp">
 
 <div class="overlay" id="settingsOverlay">
   <div class="modal">
-    <div class="modal-header">
-      <h2>Personalization settings</h2>
-      <button class="close-button" data-close="settingsOverlay">×</button>
-    </div>
-    <div class="field">
-      <label for="instructions">Custom instructions</label>
-      <textarea id="instructions" placeholder="Tell Chingame AI how you want it to respond."></textarea>
-    </div>
-    <div class="field">
-      <label for="defaultModel">Default AI model</label>
-      <select id="defaultModel">
-        <option value="openai/gpt-oss-20b">GPT-OSS 20B</option>
-        <option value="openai/gpt-oss-120b">GPT-OSS 120B</option>
-      </select>
-    </div>
-    <div class="field">
-      <label>Local data</label>
-      <p style="font-size:12px;color:#999;line-height:1.6">
-        Conversations, instructions, and memories are stored in this browser.
-        Clearing browser data may erase them. They are not synced across devices.
-      </p>
-    </div>
+    <h2>Chingame AI Settings</h2>
+    <label for="instructions">Custom instructions</label>
+    <textarea id="instructions" placeholder="Tell Chingame AI how you want it to respond..."></textarea>
+    <label for="memoryInput">Saved memories (one per line)</label>
+    <textarea id="memoryInput" placeholder="Things you want Chingame AI to remember..."></textarea>
+    <label for="voiceSelect">Spoken voice</label>
+    <select id="voiceSelect"></select>
+    <label for="speechRate">Speech speed</label>
+    <input id="speechRate" type="range" min="0.7" max="1.4" step="0.1" value="1">
     <div class="modal-actions">
-      <button class="action-button secondary" id="clearData">Clear all local data</button>
-      <button class="action-button" id="saveSettings">Save settings</button>
+      <button class="secondary" id="closeSettings">Cancel</button>
+      <button class="primary" id="saveSettings">Save settings</button>
     </div>
   </div>
 </div>
 
-<div class="overlay" id="memoryOverlay">
+<div class="overlay" id="imageOverlay">
   <div class="modal">
-    <div class="modal-header">
-      <h2>My memories</h2>
-      <button class="close-button" data-close="memoryOverlay">×</button>
-    </div>
-    <p style="font-size:13px;color:#999;line-height:1.6">
-      Add facts you want Chingame AI to use in future conversations.
-      Memories are stored in this browser and sent with your chat messages.
-    </p>
-    <div class="field">
-      <label for="newMemory">Add a memory</label>
-      <input id="newMemory" placeholder="Example: I prefer detailed explanations.">
-    </div>
+    <h2>Generate an image</h2>
+    <label for="imagePrompt">Describe the image you want</label>
+    <textarea id="imagePrompt" placeholder="A cinematic landscape at sunset, detailed digital art..."></textarea>
+    <div class="status" id="imageStatus"></div>
     <div class="modal-actions">
-      <button class="action-button" id="addMemory">Add memory</button>
-    </div>
-    <div class="section-label">Saved memories</div>
-    <div class="memory-list" id="memoryList"></div>
-  </div>
-</div>
-
-<div class="overlay" id="renameOverlay">
-  <div class="modal">
-    <div class="modal-header">
-      <h2>Rename conversation</h2>
-      <button class="close-button" data-close="renameOverlay">×</button>
-    </div>
-    <div class="field">
-      <label for="renameInput">Conversation title</label>
-      <input id="renameInput" maxlength="80">
-    </div>
-    <div class="modal-actions">
-      <button class="action-button secondary" data-close="renameOverlay">Cancel</button>
-      <button class="action-button" id="saveRename">Save name</button>
+      <button class="secondary" id="cancelImage">Cancel</button>
+      <button class="primary" id="generateImage">Generate image</button>
     </div>
   </div>
 </div>
-<div class="toast" id="toast"></div>
 
 <script>
+/* -------------------------------
+   CONFIGURATION
+-------------------------------- */
 const WORKER_URL = "https://chingame-ai.bmoonswift.workers.dev/";
-const STORAGE_KEY = "chingame_ai_data_v2";
-const $ = id => document.getElementById(id);
-const chatContent = $("chatContent");
-const chatList = $("chatList");
-const promptBox = $("prompt");
-const sendButton = $("sendButton");
-const imageButton = $("imageButton");
+const STORAGE_KEY = "chingame_ai_data_v3";
+const MEDIA_DB = "chingame_ai_media";
 
-let data = loadData();
-let currentChatId = data.chats[0]?.id || null;
-let busy = false;
-let renameTarget = null;
-
-function makeId() {
-  return crypto.randomUUID ? crypto.randomUUID() :
-    Date.now().toString(36) + Math.random().toString(36).slice(2);
+if (window.pdfjsLib) {
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
 }
+
+/* -------------------------------
+   APP STATE
+-------------------------------- */
+let data = loadData();
+let currentChatId = null;
+let webEnabled = false;
+let busy = false;
+let attachments = [];
+let recognition = null;
+let listening = false;
+let speakReplies = true;
+
+const $ = id => document.getElementById(id);
 
 function loadData() {
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
-    if (saved && Array.isArray(saved.chats)) {
-      return {
-        chats:saved.chats,
-        memories:Array.isArray(saved.memories) ? saved.memories : [],
-        instructions:typeof saved.instructions === "string" ? saved.instructions : "",
-        model:saved.model || "openai/gpt-oss-20b"
-      };
-    }
-  } catch(e) {}
-  return {chats:[],memories:[],instructions:"",model:"openai/gpt-oss-20b"};
+    if (saved && Array.isArray(saved.chats)) return saved;
+  } catch (e) {}
+  return {
+    chats: [],
+    settings: { instructions: "", memories: [], voice: "", rate: 1 }
+  };
 }
 
 function saveData() {
-  try {
-    const safeData = {
-      ...data,
-      chats:data.chats.map(chat => ({
-        ...chat,
-        messages:chat.messages.map(message => {
-          if (message.image) {
-            return {
-              role:message.role,
-              content:"Generated image (refresh to regenerate).",
-              imagePrompt:message.imagePrompt || ""
-            };
-          }
-          return message;
-        })
-      }))
-    };
-    localStorage.setItem(STORAGE_KEY,JSON.stringify(safeData));
-  } catch(e) {
-    showToast("Could not save. Browser storage may be full.");
-  }
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  $("saveStatus").textContent = "Saved in this browser.";
 }
 
-function currentChat() {
+function makeId() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+}
+
+function activeChat() {
   return data.chats.find(chat => chat.id === currentChatId);
 }
 
 function createChat() {
-  const chat = {id:makeId(),title:"New chat",messages:[],updated:Date.now()};
+  const chat = {
+    id: makeId(),
+    title: "New conversation",
+    messages: [],
+    created: Date.now()
+  };
   data.chats.unshift(chat);
   currentChatId = chat.id;
   saveData();
   renderAll();
-  promptBox.focus();
 }
 
+function ensureChat() {
+  if (!activeChat()) createChat();
+  return activeChat();
+}
+
+/* -------------------------------
+   INDEXED DB IMAGE STORAGE
+-------------------------------- */
+function openMediaDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(MEDIA_DB, 1);
+    request.onupgradeneeded = () => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains("images")) {
+        db.createObjectStore("images", { keyPath: "id" });
+      }
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+async function saveImage(blob, name) {
+  const db = await openMediaDB();
+  const id = makeId();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction("images", "readwrite");
+    tx.objectStore("images").put({
+      id, blob, name: name || "Generated image", created: Date.now()
+    });
+    tx.oncomplete = () => resolve(id);
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+async function getImage(id) {
+  const db = await openMediaDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction("images", "readonly");
+    const request = tx.objectStore("images").get(id);
+    request.onsuccess = () => resolve(request.result || null);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+async function imageDataUrlToBlob(dataUrl) {
+  const response = await fetch(dataUrl);
+  return await response.blob();
+}
+
+async function showStoredImage(id, container) {
+  try {
+    const item = await getImage(id);
+    if (!item) {
+      container.textContent = "[This image is not available in this browser.]";
+      return;
+    }
+    const url = URL.createObjectURL(item.blob);
+    const img = document.createElement("img");
+    img.src = url;
+    img.alt = item.name;
+    img.className = "generated-image";
+    container.appendChild(img);
+
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = item.name || "chingame-image.png";
+    link.textContent = "Download image";
+    link.style.display = "block";
+    link.style.marginTop = "8px";
+    link.style.fontSize = "12px";
+    container.appendChild(link);
+  } catch (error) {
+    container.textContent = "Could not load saved image.";
+  }
+}
+
+/* -------------------------------
+   CHAT DISPLAY
+-------------------------------- */
 function renderAll() {
-  renderChatList();
-  renderConversation();
+  renderHistory();
+  renderMessages();
 }
 
-function renderChatList() {
-  const query = $("chatSearch").value.toLowerCase().trim();
-  chatList.innerHTML = "";
-  const chats = [...data.chats].sort((a,b)=>b.updated-a.updated)
-    .filter(chat=>chat.title.toLowerCase().includes(query));
-  if (!chats.length) {
-    chatList.innerHTML='<div class="empty-note">No conversations yet.</div>';
-    return;
-  }
-  chats.forEach(chat=>{
-    const row=document.createElement("div");
-    row.className="chat-item"+(chat.id===currentChatId?" active":"");
-    const open=document.createElement("button");
-    open.className="chat-open";
-    open.textContent=chat.title;
-    open.title=chat.title;
-    open.addEventListener("click",()=>{currentChatId=chat.id;renderAll();});
-    const rename=document.createElement("button");
-    rename.className="chat-action";
-    rename.textContent="✎";
-    rename.title="Rename";
-    rename.addEventListener("click",()=>openRename(chat.id));
-    const remove=document.createElement("button");
-    remove.className="chat-action";
-    remove.textContent="×";
-    remove.title="Delete";
-    remove.addEventListener("click",()=>deleteChat(chat.id));
-    row.append(open,rename,remove);
-    chatList.appendChild(row);
-  });
-}
+function renderHistory() {
+  const history = $("history");
+  history.innerHTML = "";
 
-function renderConversation() {
-  chatContent.innerHTML="";
-  const chat=currentChat();
-  if (!chat || !chat.messages.length) {
-    const welcome=document.createElement("div");
-    welcome.className="welcome";
-    welcome.innerHTML=`
-      <div class="welcome-mark">C</div>
-      <h1>What can I help you with?</h1>
-      <p>Your personal AI, ready when you are.</p>
-      <div class="suggestions">
-        <button class="suggestion" data-prompt="Help me brainstorm an idea">Brainstorm ideas</button>
-        <button class="suggestion" data-prompt="Explain a difficult topic simply">Explain something</button>
-        <button class="suggestion" data-prompt="Help me make a plan">Make a plan</button>
-      </div>`;
-    chatContent.appendChild(welcome);
-    welcome.querySelectorAll("[data-prompt]").forEach(button=>{
-      button.addEventListener("click",()=>{
-        promptBox.value=button.dataset.prompt;
-        sendMessage();
-      });
-    });
-    return;
-  }
-  chat.messages.forEach((message,index)=>{
-    chatContent.appendChild(makeMessageElement(message,index));
-  });
-  $("chatScroll").scrollTop=$("chatScroll").scrollHeight;
-}
+  data.chats.forEach(chat => {
+    const item = document.createElement("div");
+    item.className = "history-item" +
+      (chat.id === currentChatId ? " active" : "");
 
-function makeMessageElement(message,index) {
-  const row=document.createElement("div");
-  row.className="message-row";
-  const avatar=document.createElement("div");
-  avatar.className="avatar"+(message.role==="assistant"?" ai":"");
-  avatar.textContent=message.role==="assistant"?"C":"Y";
-  const body=document.createElement("div");
-  body.className="message-body";
-  const name=document.createElement("div");
-  name.className="message-name";
-  name.textContent=message.role==="assistant"?"Chingame AI":"You";
-  const text=document.createElement("div");
-  text.className="message-text";
-  text.textContent=message.content;
-  body.append(name,text);
+    const title = document.createElement("span");
+    title.textContent = chat.title || "New conversation";
+    title.onclick = () => {
+      currentChatId = chat.id;
+      renderAll();
+      $("sidebar").classList.remove("open");
+    };
 
-  if (message.image) {
-    const image=document.createElement("img");
-    image.className="generated-image";
-    image.src=message.image;
-    image.alt="Generated image";
-    image.loading="lazy";
-    body.appendChild(image);
-    const download=document.createElement("a");
-    download.href=message.image;
-    download.download="chingame-ai-image.jpg";
-    download.textContent="Download image";
-    download.className="download-link";
-    body.appendChild(download);
-  } else if (message.imagePrompt && !message.pending) {
-    const retry=document.createElement("button");
-    retry.className="action-button secondary";
-    retry.textContent="Generate this image again";
-    retry.style.marginTop="10px";
-    retry.addEventListener("click",()=>generateImage(message.imagePrompt));
-    body.appendChild(retry);
-  }
-
-  if (message.role==="assistant"&&!message.pending) {
-    const tools=document.createElement("div");
-    tools.className="message-tools";
-    const copy=document.createElement("button");
-    copy.textContent="Copy";
-    copy.addEventListener("click",async()=>{
-      try {
-        await navigator.clipboard.writeText(message.content);
-        showToast("Copied to clipboard");
-      } catch(e) {showToast("Copy unavailable in this browser.");}
-    });
-    tools.appendChild(copy);
-    if (index===currentChat()?.messages.length-1) {
-      const regenerate=document.createElement("button");
-      regenerate.textContent="Regenerate";
-      regenerate.addEventListener("click",regenerateResponse);
-      tools.appendChild(regenerate);
-    }
-    body.appendChild(tools);
-  }
-  row.append(avatar,body);
-  return row;
-}
-
-async function sendMessage() {
-  if (busy) return;
-  const prompt=promptBox.value.trim();
-  if (!prompt) return;
-  if (!currentChat()) createChat();
-  const chat=currentChat();
-  if (!chat.messages.length) {
-    chat.title=prompt.length>35?prompt.slice(0,35)+"…":prompt;
-  }
-  chat.messages.push({role:"user",content:prompt});
-  chat.updated=Date.now();
-  promptBox.value="";
-  promptBox.style.height="auto";
-  saveData();
-  await requestAI();
-}
-
-async function requestAI() {
-  const chat=currentChat();
-  if (!chat) return;
-  busy=true;
-  sendButton.disabled=true;
-  imageButton.disabled=true;
-  sendButton.textContent="…";
-  chat.messages.push({role:"assistant",content:"Thinking…",pending:true});
-  renderAll();
-  try {
-    const response=await fetch(WORKER_URL,{
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({
-        messages:chat.messages.filter(m=>!m.pending).slice(-30)
-          .map(m=>({role:m.role,content:m.content})),
-        model:$("modelSelect").value,
-        customInstructions:data.instructions,
-        memories:data.memories
-      })
-    });
-    const result=await response.json();
-    if (!response.ok) throw new Error(result.error||"AI service error.");
-    if (typeof result.reply!=="string"||!result.reply.trim())
-      throw new Error("The AI returned an empty response.");
-    const latest=currentChat();
-    if (latest) {
-      latest.messages=latest.messages.filter(m=>!m.pending);
-      latest.messages.push({role:"assistant",content:result.reply});
-      latest.updated=Date.now();
-    }
-  } catch(error) {
-    const latest=currentChat();
-    if (latest) {
-      latest.messages=latest.messages.filter(m=>!m.pending);
-      latest.messages.push({role:"assistant",content:"I couldn't complete that request: "+error.message});
-    }
-  } finally {
-    busy=false;
-    sendButton.disabled=false;
-    imageButton.disabled=false;
-    sendButton.textContent="↑ Send";
-    saveData();
-    renderAll();
-    promptBox.focus();
-  }
-}
-
-async function generateImage(existingPrompt) {
-  if (busy) return;
-  const prompt=(existingPrompt || promptBox.value).trim();
-  if (!prompt) {
-    showToast("Describe the image you want first.");
-    promptBox.focus();
-    return;
-  }
-  if (prompt.length>2048) {
-    showToast("Please keep your prompt under 2048 characters.");
-    return;
-  }
-  if (!currentChat()) createChat();
-  const chat=currentChat();
-  if (!chat.messages.length) {
-    chat.title="Image: "+prompt.slice(0,30);
-  }
-  if (!existingPrompt) {
-    chat.messages.push({role:"user",content:"Create an image: "+prompt});
-    promptBox.value="";
-    promptBox.style.height="auto";
-  }
-  chat.updated=Date.now();
-  busy=true;
-  sendButton.disabled=true;
-  imageButton.disabled=true;
-  sendButton.textContent="…";
-  imageButton.textContent="Creating…";
-  chat.messages.push({
-    role:"assistant",
-    content:"Creating your image…",
-    pending:true
-  });
-  saveData();
-  renderAll();
-  try {
-    const response=await fetch(WORKER_URL,{
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({action:"generate-image",prompt})
-    });
-    const result=await response.json();
-    if (!response.ok) throw new Error(result.error||"Image generation failed.");
-    if (!result.image) throw new Error("No image was returned.");
-    const latest=currentChat();
-    if (latest) {
-      latest.messages=latest.messages.filter(m=>!m.pending);
-      latest.messages.push({
-        role:"assistant",
-        content:"Your image is ready.",
-        image:result.image,
-        imagePrompt:prompt
-      });
-      latest.updated=Date.now();
-    }
-  } catch(error) {
-    const latest=currentChat();
-    if (latest) {
-      latest.messages=latest.messages.filter(m=>!m.pending);
-      latest.messages.push({
-        role:"assistant",
-        content:"Image generation failed: "+error.message,
-        imagePrompt:prompt
-      });
-    }
-  } finally {
-    busy=false;
-    sendButton.disabled=false;
-    imageButton.disabled=false;
-    sendButton.textContent="↑ Send";
-    imageButton.textContent="✧ Image";
-    saveData();
-    renderAll();
-    promptBox.focus();
-  }
-}
-
-function regenerateResponse() {
-  if (busy) return;
-  const chat=currentChat();
-  if (!chat||chat.messages.length<2) return;
-  if (chat.messages[chat.messages.length-1].role==="assistant") chat.messages.pop();
-  if (chat.messages[chat.messages.length-1]?.role!=="user") {
-    showToast("There is no response to regenerate.");
-    return;
-  }
-  saveData();
-  requestAI();
-}
-
-function deleteChat(id) {
-  if (!confirm("Delete this conversation? This cannot be undone.")) return;
-  data.chats=data.chats.filter(chat=>chat.id!==id);
-  if (currentChatId===id) currentChatId=data.chats[0]?.id||null;
-  saveData();
-  renderAll();
-}
-
-function openRename(id) {
-  renameTarget=id;
-  const chat=data.chats.find(item=>item.id===id);
-  $("renameInput").value=chat?.title||"";
-  $("renameOverlay").classList.add("open");
-  $("renameInput").focus();
-}
-
-function showToast(message) {
-  const toast=$("toast");
-  toast.textContent=message;
-  toast.classList.add("show");
-  clearTimeout(showToast.timer);
-  showToast.timer=setTimeout(()=>toast.classList.remove("show"),2600);
-}
-
-function openOverlay(id) {$(id).classList.add("open");}
-function closeOverlay(id) {$(id).classList.remove("open");}
-
-function renderMemories() {
-  const list=$("memoryList");
-  list.innerHTML="";
-  if (!data.memories.length) {
-    list.innerHTML='<div class="empty-note">No saved memories yet.</div>';
-    return;
-  }
-  data.memories.forEach((memory,index)=>{
-    const item=document.createElement("div");
-    item.className="memory-item";
-    const text=document.createElement("span");
-    text.textContent=memory;
-    const remove=document.createElement("button");
-    remove.textContent="Remove";
-    remove.addEventListener("click",()=>{
-      data.memories.splice(index,1);
+    const del = document.createElement("button");
+    del.className = "history-delete";
+    del.textContent = "×";
+    del.title = "Delete conversation";
+    del.onclick = event => {
+      event.stopPropagation();
+      if (!confirm("Delete this conversation?")) return;
+      data.chats = data.chats.filter(c => c.id !== chat.id);
+      if (currentChatId === chat.id) {
+        currentChatId = data.chats[0]?.id || null;
+      }
       saveData();
-      renderMemories();
-    });
-    item.append(text,remove);
-    list.appendChild(item);
+      renderAll();
+    };
+
+    item.append(title, del);
+    history.appendChild(item);
   });
 }
 
-$("newChat").addEventListener("click",createChat);
-$("chatForm").addEventListener("submit",event=>{
-  event.preventDefault();
-  sendMessage();
-});
-imageButton.addEventListener("click",()=>generateImage());
+function renderMessages() {
+  const container = $("messages");
+  const welcome = $("welcome");
+  container.innerHTML = "";
 
-promptBox.addEventListener("keydown",event=>{
-  if (event.key==="Enter"&&!event.shiftKey) {
+  const chat = activeChat();
+  const hasMessages = chat && chat.messages.length > 0;
+  welcome.style.display = hasMessages ? "none" : "block";
+
+  if (!chat) return;
+
+  chat.messages.forEach((message, index) => {
+    const row = document.createElement("div");
+    row.className = "message " + message.role;
+
+    const avatar = document.createElement("div");
+    avatar.className = "avatar";
+    avatar.textContent = message.role === "user" ? "YOU" : "C";
+
+    const body = document.createElement("div");
+    body.className = "message-content";
+
+    if (message.content) {
+      const content = document.createElement("div");
+      if (message.role === "assistant" && window.marked && window.DOMPurify) {
+        content.innerHTML = DOMPurify.sanitize(
+          marked.parse(message.content)
+        );
+      } else {
+        content.textContent = message.content;
+      }
+      body.appendChild(content);
+    }
+
+    if (message.imageId) {
+      const imageHolder = document.createElement("div");
+      body.appendChild(imageHolder);
+      showStoredImage(message.imageId, imageHolder);
+    }
+
+    if (message.sources && message.sources.length) {
+      const sources = document.createElement("div");
+      sources.className = "source-list";
+      const heading = document.createElement("strong");
+      heading.textContent = "Web sources";
+      sources.appendChild(heading);
+
+      message.sources.forEach(source => {
+        if (!source.url) return;
+        const a = document.createElement("a");
+        a.href = source.url;
+        a.target = "_blank";
+        a.rel = "noopener noreferrer";
+        a.textContent = source.title || source.url;
+        sources.appendChild(a);
+      });
+      body.appendChild(sources);
+    }
+
+    if (message.role === "assistant" && message.content) {
+      const actions = document.createElement("div");
+      actions.className = "message-actions";
+
+      const copy = document.createElement("button");
+      copy.textContent = "Copy";
+      copy.onclick = () => navigator.clipboard.writeText(message.content);
+
+      const speak = document.createElement("button");
+      speak.textContent = "Read aloud";
+      speak.onclick = () => speakText(message.content);
+
+      actions.append(copy, speak);
+      body.appendChild(actions);
+    }
+
+    row.append(avatar, body);
+    container.appendChild(row);
+  });
+
+  if (busy) {
+    const typing = document.createElement("div");
+    typing.className = "message";
+    typing.innerHTML =
+      '<div class="avatar">C</div><div class="typing">Chingame AI is thinking...</div>';
+    container.appendChild(typing);
+  }
+
+  $("chatArea").scrollTop = $("chatArea").scrollHeight;
+}
+
+/* -------------------------------
+   WORKER REQUESTS
+-------------------------------- */
+async function workerRequest(payload) {
+  const response = await fetch(WORKER_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+
+  let result;
+  try {
+    result = await response.json();
+  } catch (error) {
+    throw new Error("The server returned an unreadable response.");
+  }
+
+  if (!response.ok) {
+    throw new Error(
+      result.error || result.message || "Request failed (" + response.status + ")."
+    );
+  }
+  if (result.error) throw new Error(result.error);
+  return result;
+}
+
+/* -------------------------------
+   WEB SEARCH
+-------------------------------- */
+async function searchWeb(query) {
+  const result = await workerRequest({
+    action: "search",
+    query
+  });
+
+  const results = result.results || [];
+  return results.map(item => ({
+    title: item.name || item.title || "Search result",
+    url: item.url || item.link || "",
+    snippet: item.snippet || item.description || item.content || ""
+  })).filter(item => item.url);
+}
+
+/* -------------------------------
+   SEND MESSAGE
+-------------------------------- */
+async function sendMessage() {
+  const text = $("prompt").value.trim();
+  if (busy || (!text && attachments.length === 0)) return;
+
+  const chat = ensureChat();
+  const selectedFiles = [...attachments];
+  attachments = [];
+  renderAttachments();
+
+  const userContent = text || "Please review the attached file.";
+  chat.messages.push({
+    role: "user",
+    content: userContent,
+    files: selectedFiles.map(f => f.name)
+  });
+
+  if (chat.messages.length === 1) {
+    chat.title = userContent.slice(0, 42) || "New conversation";
+  }
+
+  $("prompt").value = "";
+  resizePrompt();
+  saveData();
+  renderAll();
+
+  busy = true;
+  $("sendButton").disabled = true;
+  renderMessages();
+
+  try {
+    let webContext = "";
+    let sources = [];
+
+    if (webEnabled && text) {
+      try {
+        sources = await searchWeb(text);
+        webContext = sources.map((s, i) =>
+          `[${i + 1}] ${s.title}\n${s.snippet}\n${s.url}`
+        ).join("\n\n");
+      } catch (searchError) {
+        webContext = "Web search was attempted but failed: " + searchError.message;
+      }
+    }
+
+    let extraText = "";
+    let imageToAnalyze = null;
+
+    for (const file of selectedFiles) {
+      if (file.kind === "image") {
+        imageToAnalyze = file.dataUrl;
+      } else if (file.text) {
+        extraText += `\n\nATTACHED FILE: ${file.name}\n${file.text}`;
+      }
+    }
+
+    let imageAnalysis = "";
+    if (imageToAnalyze) {
+      try {
+        const analysis = await workerRequest({
+          action: "analyze-image",
+          image: imageToAnalyze,
+          question: text || "Describe and analyze this image."
+        });
+        imageAnalysis = "\n\nIMAGE ANALYSIS:\n" + analysis.answer;
+      } catch (error) {
+        imageAnalysis = "\n\nImage analysis could not be completed: " + error.message;
+      }
+    }
+
+    const history = chat.messages
+      .filter(m => m.role === "user" || m.role === "assistant")
+      .slice(-16)
+      .map(m => ({
+        role: m.role,
+        content: m.content +
+          (m.role === "user" && m === chat.messages[chat.messages.length - 1]
+            ? extraText + imageAnalysis
+            : "")
+      }));
+
+    const result = await workerRequest({
+      messages: history,
+      model: $("modelSelect").value,
+      customInstructions: data.settings.instructions || "",
+      memories: data.settings.memories || [],
+      webContext
+    });
+
+    chat.messages.push({
+      role: "assistant",
+      content: result.reply || "I couldn't generate a response.",
+      sources
+    });
+
+    saveData();
+    renderAll();
+
+    if (speakReplies) speakText(result.reply || "");
+  } catch (error) {
+    chat.messages.push({
+      role: "assistant",
+      content: "I ran into an error: " + error.message +
+        "\n\nPlease check that your Cloudflare Worker is deployed and its secrets are configured."
+    });
+    saveData();
+    renderAll();
+  } finally {
+    busy = false;
+    $("sendButton").disabled = false;
+    renderMessages();
+  }
+}
+
+/* -------------------------------
+   FILE UPLOADS
+-------------------------------- */
+function renderAttachments() {
+  const preview = $("attachmentPreview");
+  preview.innerHTML = "";
+
+  attachments.forEach((file, index) => {
+    const chip = document.createElement("div");
+    chip.className = "attachment";
+    const name = document.createElement("span");
+    name.textContent = file.name;
+    const remove = document.createElement("button");
+    remove.textContent = "×";
+    remove.onclick = () => {
+      attachments.splice(index, 1);
+      renderAttachments();
+    };
+    chip.append(name, remove);
+    preview.appendChild(chip);
+  });
+}
+
+function readFileAsText(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(reader.error);
+    reader.readAsText(file);
+  });
+}
+
+function readFileAsDataURL(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+}
+
+async function extractPdf(file) {
+  const buffer = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
+  let text = "";
+
+  for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++) {
+    const page = await pdf.getPage(pageNumber);
+    const content = await page.getTextContent();
+    text += content.items.map(item => item.str).join(" ") + "\n";
+  }
+  return text;
+}
+
+async function handleFiles(fileList) {
+  for (const file of Array.from(fileList)) {
+    if (file.size > 7 * 1024 * 1024) {
+      alert(file.name + " is too large. Maximum file size is 7 MB.");
+      continue;
+    }
+
+    const extension = file.name.split(".").pop().toLowerCase();
+    const item = { name: file.name, kind: "document", text: "" };
+
+    try {
+      if (file.type.startsWith("image/") ||
+          ["png","jpg","jpeg","webp"].includes(extension)) {
+        item.kind = "image";
+        item.dataUrl = await readFileAsDataURL(file);
+      } else if (extension === "pdf") {
+        if (!window.pdfjsLib) throw new Error("PDF reader did not load.");
+        item.text = await extractPdf(file);
+      } else if (extension === "docx") {
+        if (!window.mammoth) throw new Error("DOCX reader did not load.");
+        const arrayBuffer = await file.arrayBuffer();
+        const result = await mammoth.extractRawText({ arrayBuffer });
+        item.text = result.value;
+      } else if (["txt","md"].includes(extension)) {
+        item.text = await readFileAsText(file);
+      } else {
+        alert("That file type is not supported: " + file.name);
+        continue;
+      }
+
+      attachments.push(item);
+    } catch (error) {
+      alert("Could not read " + file.name + ": " + error.message);
+    }
+  }
+  renderAttachments();
+  $("fileInput").value = "";
+}
+
+/* -------------------------------
+   IMAGE GENERATION
+-------------------------------- */
+async function generateImage() {
+  const prompt = $("imagePrompt").value.trim();
+  if (!prompt) {
+    $("imageStatus").textContent = "Enter a description first.";
+    return;
+  }
+
+  $("generateImage").disabled = true;
+  $("imageStatus").textContent = "Generating your image. This may take a moment...";
+
+  try {
+    const result = await workerRequest({
+      action: "generate-image",
+      prompt
+    });
+
+    if (!result.image) throw new Error("No image was returned.");
+
+    const blob = await imageDataUrlToBlob(result.image);
+    const imageId = await saveImage(blob, "chingame-generated.png");
+
+    const chat = ensureChat();
+    chat.messages.push({
+      role: "assistant",
+      content: "Here is the image I generated for you.",
+      imageId
+    });
+
+    saveData();
+    renderAll();
+    $("imageOverlay").classList.remove("open");
+    $("imagePrompt").value = "";
+    $("imageStatus").textContent = "";
+  } catch (error) {
+    $("imageStatus").textContent = "Image generation failed: " + error.message;
+  } finally {
+    $("generateImage").disabled = false;
+  }
+}
+
+/* -------------------------------
+   VOICE INPUT AND OUTPUT
+-------------------------------- */
+function getRecognitionConstructor() {
+  return window.SpeechRecognition || window.webkitSpeechRecognition;
+}
+
+function startListening() {
+  const SpeechRecognition = getRecognitionConstructor();
+
+  if (!SpeechRecognition) {
+    alert("Speech recognition is not supported by this browser. Try a supported version of Chrome.");
+    return;
+  }
+
+  if (listening && recognition) {
+    recognition.stop();
+    return;
+  }
+
+  recognition = new SpeechRecognition();
+  recognition.lang = "en-US";
+  recognition.interimResults = true;
+  recognition.continuous = false;
+
+  recognition.onstart = () => {
+    listening = true;
+    $("voiceButton").classList.add("active");
+    $("voiceIndicator").style.display = "inline";
+    $("voiceIndicator").textContent = "Listening...";
+  };
+
+  recognition.onresult = event => {
+    let transcript = "";
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      transcript += event.results[i][0].transcript;
+    }
+    $("prompt").value = transcript;
+    resizePrompt();
+  };
+
+  recognition.onerror = event => {
+    $("voiceIndicator").textContent = "Voice error: " + event.error;
+  };
+
+  recognition.onend = () => {
+    listening = false;
+    $("voiceButton").classList.remove("active");
+    $("voiceIndicator").style.display = "none";
+  };
+
+  try {
+    recognition.start();
+  } catch (error) {
+    alert("Could not start voice input: " + error.message);
+  }
+}
+
+function speakText(text) {
+  if (!("speechSynthesis" in window)) {
+    alert("Spoken replies are not supported in this browser.");
+    return;
+  }
+
+  window.speechSynthesis.cancel();
+  const utterance = new SpeechSynthesisUtterance(
+    String(text).replace(/```[\s\S]*?```/g, "Code block omitted.")
+  );
+  utterance.rate = Number(data.settings.rate || 1);
+
+  const voices = window.speechSynthesis.getVoices();
+  const selected = voices.find(v => v.name === data.settings.voice);
+  if (selected) utterance.voice = selected;
+
+  window.speechSynthesis.speak(utterance);
+}
+
+function loadVoices() {
+  const select = $("voiceSelect");
+  if (!select) return;
+
+  const voices = window.speechSynthesis
+    ? window.speechSynthesis.getVoices()
+    : [];
+
+  select.innerHTML = "";
+  voices.forEach(voice => {
+    const option = document.createElement("option");
+    option.value = voice.name;
+    option.textContent = voice.name + " (" + voice.lang + ")";
+    select.appendChild(option);
+  });
+
+  select.value = data.settings.voice || "";
+}
+
+/* -------------------------------
+   SETTINGS
+-------------------------------- */
+function openSettings() {
+  $("instructions").value = data.settings.instructions || "";
+  $("memoryInput").value = (data.settings.memories || []).join("\n");
+  $("speechRate").value = data.settings.rate || 1;
+  loadVoices();
+  $("settingsOverlay").classList.add("open");
+}
+
+function saveSettings() {
+  data.settings.instructions = $("instructions").value.trim();
+  data.settings.memories = $("memoryInput").value
+    .split("\n").map(x => x.trim()).filter(Boolean);
+  data.settings.voice = $("voiceSelect").value;
+  data.settings.rate = Number($("speechRate").value);
+  saveData();
+  $("settingsOverlay").classList.remove("open");
+}
+
+/* -------------------------------
+   EXPORT
+-------------------------------- */
+function exportChats() {
+  const blob = new Blob(
+    [JSON.stringify(data, null, 2)],
+    { type: "application/json" }
+  );
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "chingame-ai-conversations.json";
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+/* -------------------------------
+   INPUT RESIZING
+-------------------------------- */
+function resizePrompt() {
+  const input = $("prompt");
+  input.style.height = "auto";
+  input.style.height = Math.min(input.scrollHeight, 180) + "px";
+}
+
+/* -------------------------------
+   EVENT LISTENERS
+-------------------------------- */
+$("newChat").onclick = createChat;
+$("clearButton").onclick = createChat;
+$("sendButton").onclick = sendMessage;
+$("prompt").addEventListener("input", resizePrompt);
+
+$("prompt").addEventListener("keydown", event => {
+  if (event.key === "Enter" && !event.shiftKey) {
     event.preventDefault();
     sendMessage();
   }
 });
-promptBox.addEventListener("input",()=>{
-  promptBox.style.height="auto";
-  promptBox.style.height=Math.min(promptBox.scrollHeight,180)+"px";
+
+$("uploadButton").onclick = () => $("fileInput").click();
+$("fileInput").addEventListener("change", event => handleFiles(event.target.files));
+
+$("imageButton").onclick = () => {
+  $("imageOverlay").classList.add("open");
+};
+
+$("cancelImage").onclick = () => {
+  $("imageOverlay").classList.remove("open");
+};
+
+$("generateImage").onclick = generateImage;
+$("voiceButton").onclick = startListening;
+$("settingsButton").onclick = openSettings;
+$("closeSettings").onclick = () => $("settingsOverlay").classList.remove("open");
+$("saveSettings").onclick = saveSettings;
+$("exportButton").onclick = exportChats;
+$("menuButton").onclick = () => $("sidebar").classList.toggle("open");
+
+$("webButton").onclick = () => {
+  webEnabled = !webEnabled;
+  $("webButton").classList.toggle("active", webEnabled);
+  $("webButton").textContent = webEnabled ? "◎ Web ON" : "◎ Web";
+};
+
+$("welcome").querySelectorAll(".suggestion").forEach(button => {
+  button.onclick = () => {
+    $("prompt").value = button.dataset.prompt;
+    resizePrompt();
+    $("prompt").focus();
+  };
 });
 
-$("modelSelect").value=data.model;
-$("modelSelect").addEventListener("change",()=>{
-  data.model=$("modelSelect").value;
-  saveData();
-  showToast("Model changed");
-});
-
-$("settingsButton").addEventListener("click",()=>{
-  $("instructions").value=data.instructions;
-  $("defaultModel").value=data.model;
-  openOverlay("settingsOverlay");
-});
-$("saveSettings").addEventListener("click",()=>{
-  data.instructions=$("instructions").value.trim();
-  data.model=$("defaultModel").value;
-  $("modelSelect").value=data.model;
-  saveData();
-  closeOverlay("settingsOverlay");
-  showToast("Settings saved");
-});
-
-$("memoryButton").addEventListener("click",()=>{
-  renderMemories();
-  openOverlay("memoryOverlay");
-});
-$("addMemory").addEventListener("click",()=>{
-  const value=$("newMemory").value.trim();
-  if (!value) return;
-  if (data.memories.length>=30) {
-    showToast("Memory limit reached. Remove one first.");
-    return;
+$("settingsOverlay").addEventListener("click", event => {
+  if (event.target === $("settingsOverlay")) {
+    $("settingsOverlay").classList.remove("open");
   }
-  data.memories.push(value.slice(0,500));
-  $("newMemory").value="";
-  saveData();
-  renderMemories();
-  showToast("Memory saved");
-});
-$("newMemory").addEventListener("keydown",event=>{
-  if (event.key==="Enter") $("addMemory").click();
 });
 
-$("saveRename").addEventListener("click",()=>{
-  const chat=data.chats.find(item=>item.id===renameTarget);
-  const name=$("renameInput").value.trim();
-  if (chat&&name) {
-    chat.title=name.slice(0,80);
-    saveData();
-    renderChatList();
+$("imageOverlay").addEventListener("click", event => {
+  if (event.target === $("imageOverlay")) {
+    $("imageOverlay").classList.remove("open");
   }
-  closeOverlay("renameOverlay");
 });
 
-document.querySelectorAll("[data-close]").forEach(button=>{
-  button.addEventListener("click",()=>closeOverlay(button.dataset.close));
-});
-document.querySelectorAll(".overlay").forEach(overlay=>{
-  overlay.addEventListener("click",event=>{
-    if (event.target===overlay) overlay.classList.remove("open");
-  });
-});
+if (window.speechSynthesis) {
+  window.speechSynthesis.onvoiceschanged = loadVoices;
+}
 
-$("searchToggle").addEventListener("click",()=>{
-  const search=$("chatSearch");
-  search.hidden=!search.hidden;
-  if (!search.hidden) search.focus();
-  else {search.value="";renderChatList();}
-});
-$("chatSearch").addEventListener("input",renderChatList);
-
-$("collapseButton").addEventListener("click",()=>{
-  $("sidebar").classList.toggle("collapsed");
-});
-$("mobileMenu").addEventListener("click",()=>{
-  $("sidebar").classList.toggle("collapsed");
-});
-
-$("exportButton").addEventListener("click",()=>{
-  const blob=new Blob([JSON.stringify({
-    exportedAt:new Date().toISOString(),
-    chats:data.chats,
-    memories:data.memories,
-    instructions:data.instructions
-  },null,2)],{type:"application/json"});
-  const url=URL.createObjectURL(blob);
-  const link=document.createElement("a");
-  link.href=url;
-  link.download="chingame-ai-backup.json";
-  link.click();
-  URL.revokeObjectURL(url);
-  showToast("Backup exported");
-});
-
-$("clearData").addEventListener("click",()=>{
-  if (!confirm("This permanently deletes all local chats, memories, and settings. Continue?")) return;
-  localStorage.removeItem(STORAGE_KEY);
-  data={chats:[],memories:[],instructions:"",model:"openai/gpt-oss-20b"};
-  currentChatId=null;
-  $("modelSelect").value=data.model;
-  closeOverlay("settingsOverlay");
-  saveData();
-  renderAll();
-  showToast("Local data cleared");
-});
+/* -------------------------------
+   STARTUP
+-------------------------------- */
+if (data.chats.length) {
+  currentChatId = data.chats[0].id;
+} else {
+  createChat();
+}
 
 renderAll();
+loadVoices();
 </script>
 </body>
 </html>
